@@ -1,19 +1,20 @@
 /* Author: Pablo Ib | Last modified by: Pablo Ib */
 'use strict';
-const test=require('node:test');
-const assert=require('node:assert/strict');
-const M=require('./model.js');
-const G=require('./graph.js');
-test('3D coordinates reproduce the weighted distance for all supported metrics and senses',()=>{
-  for(const p of [1,1.5,2,3,6]) for(const directions of [['max','max','max'],['min','max','min']]) for(const weights of [[34,33,33],[100,0,0],[0,25,75]]) {
-    const state={...M.example(),p,directions,weights},result=M.calculate(state),space=G.geometry(state,result);
+const test=require('node:test'),assert=require('node:assert/strict');
+const M=require('./model.js'),G=require('./graph.js');
+test('3D coordinates match the weighted matrix and both Euclidean distances for all senses',()=>{
+  for(const directions of [['max','max','max'],['min','max','min']]) for(const weights of [[34,33,33],[100,0,0],[0,25,75],[20,20,20]]) {
+    const state={...M.example(),directions,weights},result=M.calculate(state),space=G.geometry(state,result);
+    assert.deepEqual(space.points,result.weighted);assert.deepEqual(space.ideal,result.weightedIdeal);assert.deepEqual(space.antiIdeal,result.weightedAntiIdeal);
     space.points.forEach((point,i)=>{
-      const distance=Math.pow(point.reduce((sum,x,j)=>sum+Math.abs(x-space.ideal[j])**p,0),1/p);
-      assert.ok(Math.abs(distance-result.rows[i].distance)<1e-12);
+      for(const [target,key] of [[space.ideal,'distance'],[space.antiIdeal,'distanceAntiIdeal']]) {
+        const distance=Math.sqrt(point.reduce((sum,x,j)=>sum+(x-target[j])**2,0));
+        assert.ok(Math.abs(distance-result.rows[i][key])<1e-12);
+      }
     });
   }
 });
-test('Rotating, zooming and panning change the projection, never the decision data',()=>{
+test('Camera operations change projection, never the underlying state or distance',()=>{
   const state=M.example(),before=JSON.stringify(state),result=M.calculate(state),space=G.geometry(state,result),camera=G.initialCamera();
   const initial=G.project(space.points[0],space.extents,camera);
   assert.notDeepEqual(initial,G.project(space.points[0],space.extents,{...camera,yaw:camera.yaw+.6}));
@@ -22,16 +23,22 @@ test('Rotating, zooming and panning change the projection, never the decision da
   assert.notDeepEqual(initial,G.project(space.points[0],space.extents,{...camera,zoom:2}));
   assert.equal(JSON.stringify(state),before);
 });
-test('Projection stays finite when dimensions collapse because of zero weights',()=>{
-  for(const weights of [[0,0,0],[100,0,0]]) {
-    const state={...M.example(),weights},result=M.calculate(state),space=G.geometry(state,result);
-    space.points.forEach(point=>assert.ok(G.project(point,space.extents,G.initialCamera()).every(Number.isFinite)));
+test('Projection remains finite for collapsed dimensions',()=>{
+  for(const weights of [[0,0,0],[100,0,0],[0.001,0,0]]) {
+    const state={...M.example(),weights},space=G.geometry(state,M.calculate(state));
+    [...space.points,space.ideal,space.antiIdeal].forEach(point=>assert.ok(G.project(point,space.extents,G.initialCamera()).every(Number.isFinite)));
   }
 });
-test('Old exported five-alternative scenarios migrate to A, B and C',()=>{
-  const old=M.example();old.values.push([77,76,74],[69,84,81]);
-  const original=JSON.stringify(old),restored=M.imported({schemaVersion:1,state:old,endpoints:[old,old]});
-  assert.equal(restored.state.values.length,3);assert.equal(restored.endpoints[0].values.length,3);
-  assert.deepEqual(restored.state.values,M.example().values);assert.equal(JSON.stringify(old),original);
-  assert.throws(()=>M.imported({schemaVersion:2,state:old,endpoints:[old,old]}));
+test('Rendered chart includes both references and names, escapes custom labels, and has no distance segments or readouts',()=>{
+  const state={...M.example(),criteria:['<script> & frío','Humedales','DiFLUsion']},result=M.calculate(state),content={innerHTML:''};
+  const svg={querySelector:()=>content,addEventListener:()=>{}},chart=new G.Chart(svg);
+  chart.update(state,result);
+  assert.match(content.innerHTML,/class="ideal-point"/);assert.match(content.innerHTML,/class="antiideal-point"/);
+  for(const name of M.NAMES) assert.ok(content.innerHTML.includes(name));
+  assert.ok(content.innerHTML.includes('&lt;script&gt; &amp; frío'));
+  assert.ok(!content.innerHTML.includes('<script>'));
+  assert.ok(!/distancia|stroke-dasharray|· 0[,\.]/i.test(content.innerHTML));
+  chart.update({...state,weights:[0,0,0]},M.calculate({...state,weights:[0,0,0]}));
+  assert.match(content.innerHTML,/Activa al menos un peso/);
 });
+

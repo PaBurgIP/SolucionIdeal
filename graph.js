@@ -5,9 +5,8 @@
   const escape = text => String(text).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const initialCamera = () => ({yaw:-0.65, pitch:0.42, zoom:1, panX:0, panY:0});
   function geometry(state, result) {
-    const extents = result.weights.map(weight => Math.pow(weight, 1 / state.p));
-    const transform = values => values.map((value,j) => (state.directions[j] === 'max' ? value : 100 - value) / 100 * extents[j]);
-    return {extents, ideal:transform(result.ideal), points:result.rows.map(row => transform(row.values))};
+    return {extents:result.weights.slice(), ideal:result.weightedIdeal.slice(),
+      antiIdeal:result.weightedAntiIdeal.slice(), points:result.weighted.map(row => row.slice())};
   }
   function project(point, extents, camera) {
     const [x,y,z] = point.map((value,j) => value - extents[j] / 2);
@@ -79,7 +78,7 @@
       if (!this.result) return;
       this.options.onView?.(this.camera);
       if (!this.result.valid) { this.content.innerHTML='<text x="340" y="215" text-anchor="middle" class="scene-empty">Activa al menos un peso para ver el espacio 3D.</text>'; return; }
-      const {extents,ideal,points}=geometry(this.state,this.result);
+      const {extents,ideal,antiIdeal,points}=geometry(this.state,this.result);
       const p = point => project(point,extents,this.camera);
       const line = (a,b,color='#d9e2d6',width=1,dash='') => {
         const u=p(a),v=p(b);
@@ -106,30 +105,28 @@
         if(extent<.001) return;
         const label=end.slice(); label[j]*=1.12; const q=p(label);
         const anchor=Math.abs(q[0]-340)<35 ? 'middle' : q[0]>340 ? 'start' : 'end';
-        out+=`<text x="${q[0]}" y="${q[1]}" text-anchor="${anchor}" class="scene-axis" fill="${axisColors[j]}">${escape(this.options.criteria[j])}<tspan x="${q[0]}" dy="15" class="scene-axis-note">${this.state.directions[j]==='max' ? '↑ más es mejor' : '↓ menos es mejor'}</tspan></text>`;
+        const name=this.state.criteria[j];
+        const axisName=name.length>23 ? name.slice(0,22)+'…' : name;
+        out+=`<text x="${q[0]}" y="${q[1]}" text-anchor="${anchor}" class="scene-axis" fill="${axisColors[j]}"><title>${escape(name)}</title>${escape(axisName)}<tspan x="${q[0]}" dy="15" class="scene-axis-note">${this.state.directions[j]==='max' ? '↑ más es mejor' : '↓ menos es mejor'}</tspan></text>`;
         const mid=end.map(x=>x*.5), m=p(mid);
-        out+=`<text x="${m[0]+5}" y="${m[1]+14}" class="scene-tick">50</text>`;
+        out+=`<text x="${m[0]+5}" y="${m[1]+14}" class="scene-tick">${(extent*.5).toLocaleString('es-ES',{maximumFractionDigits:3})}</text>`;
       });
-      const zero=p(origin); out+=`<text x="${zero[0]-12}" y="${zero[1]+15}" class="scene-tick">${this.state.directions.every(d=>d==='max') ? '0' : 'origen'}</text>`;
-      const ideal2d=p(ideal);
-      this.result.rows.forEach((row,i) => {
-        const opacity=this.selected===null || this.selected===i ? 0.9 : .18;
-        out+=`<g opacity="${opacity}">${line(points[i],ideal,row.color,2,'5 5')}</g>`;
-      });
-      const objects=this.result.rows.map((row,i)=>({row,point:points[i],depth:p(points[i])[2]}));
-      objects.push({row:null,point:ideal,depth:ideal2d[2]}); objects.sort((a,b)=>a.depth-b.depth);
+      const zero=p(origin); out+=`<text x="${zero[0]-12}" y="${zero[1]+15}" class="scene-tick">0</text>`;
+      const objects=this.result.rows.map((row,i)=>({row,point:points[i],name:row.name,color:row.color}));
+      objects.push({point:ideal,name:'Ideal',color:'#203c36',kind:'ideal'}, {point:antiIdeal,name:'Antiideal',color:'#a86945',kind:'antiideal'});
+      objects.sort((a,b)=>p(a.point)[2]-p(b.point)[2]);
+      const labels=[];
       objects.forEach(object => {
-        const q=p(object.point);
-        if(!object.row) {
-          out+=`<g class="ideal-point"><circle cx="${q[0]}" cy="${q[1]}" r="15" fill="#eaf2d6" fill-opacity=".8"/><path d="M ${q[0]} ${q[1]-8} l 8 8 -8 8 -8 -8 Z" fill="#203c36" stroke="white" stroke-width="2"/><text x="${q[0]+17}" y="${q[1]-13}" class="scene-point-label ideal-label">Ideal</text></g>`;
-        } else {
-          const row=object.row, opacity=this.selected===null || this.selected===row.index ? 1 : .25;
-          const label=`${String.fromCharCode(65+row.index)} · ${row.distance.toLocaleString('es-ES',{minimumFractionDigits:3,maximumFractionDigits:3})}`;
-          // Separate identical projected points to keep labels readable; point coordinates remain exact.
-          const overlap=objects.filter(other=>other.row && other.row.index<row.index && Math.hypot(p(other.point)[0]-q[0],p(other.point)[1]-q[1])<30).length;
-          const ly=q[1]+(row.index===1 ? 24 : -14)-overlap*20;
-          out+=`<g data-point="${row.index}" opacity="${opacity}" class="alternative-point"><title>${escape(row.name)}: distancia ${row.distance.toFixed(3)}; valores ${row.values.map(x=>x.toFixed(1)).join(', ')}</title><circle cx="${q[0]}" cy="${q[1]}" r="${this.selected===row.index ? 10 : 8}" fill="${row.color}" stroke="white" stroke-width="3"/><text x="${q[0]+13}" y="${ly}" class="scene-point-label" fill="${row.color}">${label}</text></g>`;
-        }
+        const q=p(object.point),row=object.row;
+        const opacity=!row || this.selected===null || this.selected===row.index ? 1 : .25;
+        // Offset labels when projected points coincide; never alter actual coordinates.
+        const anchor=q[0]>490 ? 'end' : 'start',lx=q[0]+(anchor==='end' ? -14 : 14);
+        let ly=q[1]-14;
+        while(labels.some(label=>Math.abs(label.x-lx)<125 && Math.abs(label.y-ly)<20)) ly+=22;
+        ly=clamp(ly,20,420); labels.push({x:lx,y:ly});
+        const marker=row ? `<circle cx="${q[0]}" cy="${q[1]}" r="${this.selected===row.index ? 10 : 8}" fill="${object.color}" stroke="white" stroke-width="3"/>`
+          : `<path d="M ${q[0]} ${q[1]-9} l 9 9 -9 9 -9 -9 Z" fill="${object.kind==='antiideal' ? '#fff5e9' : object.color}" stroke="${object.color}" stroke-width="3"/>`;
+        out+=`<g ${row ? `data-point="${row.index}" class="alternative-point"` : `class="${object.kind}-point"`} opacity="${opacity}"><title>${escape(object.name)}</title>${marker}<text x="${lx}" y="${ly}" text-anchor="${anchor}" class="scene-point-label ${object.kind ? object.kind+'-label' : ''}" fill="${object.color}">${escape(object.name)}</text></g>`;
       });
       this.content.innerHTML=out;
     }

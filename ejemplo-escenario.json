@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "author": "Pablo Ib",
   "lastModifiedBy": "Pablo Ib",
   "state": {
@@ -30,71 +30,10 @@
       "max",
       "max"
     ],
-    "idealMode": "fixed",
-    "p": 2
-  },
-  "endpoints": [
-    {
-      "values": [
-        [
-          88,
-          52,
-          46
-        ],
-        [
-          61,
-          91,
-          58
-        ],
-        [
-          56,
-          62,
-          94
-        ]
-      ],
-      "weights": [
-        34,
-        33,
-        33
-      ],
-      "directions": [
-        "max",
-        "max",
-        "max"
-      ],
-      "idealMode": "fixed",
-      "p": 2
-    },
-    {
-      "values": [
-        [
-          88,
-          52,
-          46
-        ],
-        [
-          61,
-          91,
-          58
-        ],
-        [
-          56,
-          62,
-          94
-        ]
-      ],
-      "weights": [
-        80,
-        10,
-        10
-      ],
-      "directions": [
-        "max",
-        "max",
-        "max"
-      ],
-      "idealMode": "fixed",
-      "p": 2
-    }
-  ]
+    "criteria": [
+      "Temperaturas",
+      "Humedales",
+      "DiFLUsion"
+    ]
+  }
 }
