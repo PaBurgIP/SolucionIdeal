@@ -1,0 +1,12 @@
+{
+  "name": "distancia-ideal",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Laboratorio interactivo: 3 alternativas, 3 criterios y distancia a la solución ideal.",
+  "author": "Pablo Ib",
+  "lastModifiedBy": "Pablo Ib",
+  "scripts": {
+    "test": "node --test model.test.cjs graph.test.cjs",
+    "start": "node serve.cjs"
+  }
+}

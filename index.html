@@ -1,0 +1,105 @@
+<!doctype html>
+<!-- Author: Pablo Ib | Last modified by: Pablo Ib -->
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Pablo Ib">
+  <meta name="last-modified-by" content="Pablo Ib">
+  <meta name="description" content="Laboratorio interactivo de decisión multicriterio: tres alternativas, tres criterios y la distancia a la solución ideal.">
+  <meta name="color-scheme" content="light">
+  <title>Distancia al ideal · Laboratorio de decisión</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="model.js" defer></script>
+  <script src="graph.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#laboratorio">Saltar al laboratorio</a>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Distancia al ideal, inicio"><span class="brand-mark" aria-hidden="true">◎</span> DISTANCIA AL IDEAL</a>
+    <span class="top-note">Un laboratorio de decisión multicriterio</span>
+    <button class="button subtle" id="reset">↺ <span>Restablecer ejemplo</span></button>
+  </header>
+  <main>
+    <section class="intro">
+      <div><p class="eyebrow"><span class="live-dot"></span> EXPLORA · COMPARA · DECIDE</p>
+        <h1>Tres alternativas.<br><em>Explora su distancia al ideal.</em></h1>
+        <p class="lede">Gira el gráfico, mueve los deslizadores y descubre cómo tus prioridades cambian la distancia a la solución ideal.</p>
+      </div>
+      <div class="intro-stat"><strong>3 <span>×</span> 3</strong><span>alternativas &nbsp;·&nbsp; criterios</span><small>Resultados en tiempo real</small></div>
+    </section>
+
+    <section class="workspace" id="laboratorio" aria-label="Laboratorio interactivo">
+      <aside class="panel settings" aria-labelledby="settings-title">
+        <div class="section-label">01 / TUS PRIORIDADES</div>
+        <h2 id="settings-title">Qué importa más</h2>
+        <p class="muted">Ajusta la importancia relativa. Los pesos efectivos se normalizan para sumar el 100 %.</p>
+        <div id="weight-controls"></div>
+        <div class="weight-strip" id="weight-strip" aria-hidden="true"></div>
+        <p class="small muted" id="weight-summary"></p>
+        <div class="divider"></div>
+        <label class="field-label" for="ideal-mode">La referencia ideal</label>
+        <select id="ideal-mode"><option value="fixed">Extremo de la escala (100 o 0)</option><option value="observed">Mejor valor de cada criterio</option></select>
+        <p class="small muted" id="ideal-help"></p>
+        <div class="ideal-vector" id="ideal-vector"></div>
+        <div class="divider"></div>
+        <div class="label-line"><label class="field-label" for="p-slider">Cómo medir la distancia</label><output id="p-output" for="p-slider">p = 2</output></div>
+        <input type="range" min="1" max="6" step="0.1" value="2" id="p-slider" aria-describedby="p-help">
+        <div class="range-labels"><span>p = 1</span><span>p = 6</span></div>
+        <div class="metric-presets"><button data-p="1" class="chip">Manhattan · p=1</button><button data-p="2" class="chip active">Euclídea · p=2</button></div>
+        <p class="small muted" id="p-help">Al subir p, las mayores desviaciones respecto al ideal tienen más influencia.</p>
+      </aside>
+
+      <section class="panel results" aria-labelledby="results-title">
+        <div class="panel-heading"><div><div class="section-label">02 / LA DISTANCIA</div><h2 id="results-title">La decisión, en tres dimensiones</h2></div><span class="badge">Menos distancia = mejor</span></div>
+        <div id="validation" class="notice danger" role="alert" hidden>Activa al menos un peso para calcular las distancias. Con los tres pesos a cero no hay clasificación.</div>
+        <div class="results-grid">
+          <div class="chart-area">
+            <div class="scene-topline"><span class="scene-tag">VISTA INTERACTIVA 3D</span><output id="zoom-readout" aria-label="Ampliación de la vista">Zoom 100 %</output></div>
+            <svg id="scene" viewBox="0 0 680 440" role="group" aria-roledescription="gráfico tridimensional interactivo" tabindex="0" aria-labelledby="scene-title" aria-describedby="scene-desc scene-help"><title id="scene-title">Tres alternativas y la solución ideal en tres dimensiones</title><desc id="scene-desc">Cada eje representa un criterio ponderado. Los puntos A, B y C se conectan con el ideal mediante segmentos discontinuos. Arrastra para girar, usa la rueda para ampliar o Mayús y arrastrar para desplazar. Con el gráfico enfocado, usa flechas, más, menos o Inicio.</desc><g id="scene-content"></g></svg>
+            <div class="camera-toolbar" role="group" aria-label="Controles de la vista 3D"><button id="camera-left" aria-label="Girar a la izquierda" title="Girar a la izquierda">↶</button><button id="camera-right" aria-label="Girar a la derecha" title="Girar a la derecha">↷</button><span></span><button id="camera-out" aria-label="Alejar" title="Alejar">−</button><button id="camera-in" aria-label="Acercar" title="Acercar">＋</button><button id="camera-reset" class="camera-reset" title="Restablecer orientación y zoom">Centrar vista</button></div>
+            <p id="scene-help" class="scene-help">Arrastra para girar · Rueda para zoom · Mayús + arrastrar para desplazar<br>En pantalla táctil: un dedo gira; dos dedos amplían y desplazan.</p>
+            <div class="legend" id="legend" aria-label="Resaltar alternativa"></div>
+            <p id="geometry-help" class="chart-caption"></p>
+          </div>
+          <div class="ranking-area"><div class="ranking-label">CLASIFICACIÓN POR DISTANCIA</div><div id="ranking"></div><p class="small muted">Distancias entre 0 y 1. El 0 indica que no hay desviación en los criterios con peso positivo.</p></div>
+        </div>
+        <div class="insight" id="insight" role="status" aria-live="polite" aria-atomic="true"></div>
+      </section>
+    </section>
+
+    <section class="panel matrix" aria-labelledby="matrix-title">
+      <div class="panel-heading"><div><div class="section-label">03 / LAS ALTERNATIVAS</div><h2 id="matrix-title">El experimento está en tus manos</h2><p class="muted">Cambia cualquier valor entre 0 y 100. Decide, para cada criterio, si más es mejor o menos es mejor.</p></div><button class="button subtle" id="randomize">↝ Otro ejemplo</button></div>
+      <div class="table-scroll"><table><caption class="sr-only">Matriz de tres alternativas y tres criterios, editable con deslizadores. Distancias y posiciones actualizadas en tiempo real.</caption>
+        <thead><tr><th scope="col">Alternativa</th><th scope="col"><span>Eficacia</span><select class="direction" data-criterion="0" aria-label="Sentido de eficacia"><option value="max">↑ Más es mejor</option><option value="min">↓ Menos es mejor</option></select></th><th scope="col"><span>Sostenibilidad</span><select class="direction" data-criterion="1" aria-label="Sentido de sostenibilidad"><option value="max">↑ Más es mejor</option><option value="min">↓ Menos es mejor</option></select></th><th scope="col"><span>Viabilidad</span><select class="direction" data-criterion="2" aria-label="Sentido de viabilidad"><option value="max">↑ Más es mejor</option><option value="min">↓ Menos es mejor</option></select></th><th scope="col">Distancia<br><span class="small muted">0 → ideal</span></th></tr></thead>
+        <tbody id="matrix-body"></tbody>
+      </table></div>
+      <div class="matrix-foot"><span id="ideal-match"></span><span>Datos ilustrativos · sin unidades</span></div>
+    </section>
+
+    <section class="panel timeline" aria-labelledby="timeline-title">
+      <div class="panel-heading"><div><div class="section-label">04 / EXPLORACIÓN TEMPORAL</div><h2 id="timeline-title">De un escenario a otro</h2><p class="muted">Guarda dos estados y recorre la transición de valores, pesos y p. Se mantienen el sentido de los criterios y la referencia ideal actuales.</p></div><span class="badge">Time slider</span></div>
+      <div class="timeline-controls"><button class="button" id="save-start">Guardar inicio</button><button class="play-button" id="play" aria-label="Reproducir transición" aria-pressed="false">▶</button><div class="time-track"><div class="label-line"><label for="time-slider" class="field-label">Transición</label><output id="time-output" for="time-slider">0 %</output></div><input id="time-slider" type="range" min="0" max="100" step="0.1" value="0"><div class="range-labels"><span>Inicio</span><span>Final</span></div></div><button class="button" id="save-end">Guardar final</button></div>
+      <p class="small muted" id="timeline-status">Ejemplo temporal: de pesos equilibrados a priorizar la eficacia (80 / 10 / 10). Duración: 12 segundos.</p>
+      <div class="timeline-preview" id="timeline-preview"></div>
+    </section>
+
+    <section class="bottom-grid">
+      <details class="panel method"><summary>Entender el cálculo <span aria-hidden="true">＋</span></summary><div class="method-content">
+        <p>Para cada alternativa, comparamos sus tres valores con el vector ideal <strong>z*</strong>. Todos los criterios usan una escala fija de 0 a 100.</p>
+        <div class="formula">d<sub>p</sub>(i) = [ Σ<sub>j=1…3</sub> w<sub>j</sub> · ( |x<sub>ij</sub> − z*<sub>j</sub>| / 100 )<sup>p</sup> ]<sup>1/p</sup></div>
+        <p>Los pesos efectivos son w<sub>j</sub> = peso<sub>j</sub> / Σ pesos. Con p = 1 se obtiene la distancia Manhattan ponderada; con p = 2, la euclídea ponderada. Se ponderan las potencias de las desviaciones, antes de extraer la raíz.</p>
+        <p>El ideal de escala es 100 cuando más es mejor y 0 cuando menos es mejor. El ideal observado combina el mejor valor de cada criterio, aunque proceda de alternativas diferentes. Los datos iniciales no alcanzan ninguno de esos dos vectores ideales.</p>
+        <p>La normalización divide entre 100, el rango fijo de la escala; no cambia al editar las alternativas. Un peso 0 excluye su criterio del cálculo. Puede haber empates o distancia 0 sin coincidencia completa con el ideal si algún criterio tiene peso 0. La distancia depende de tus preferencias; no expresa una probabilidad ni una recomendación universal.</p>
+        <p>El gráfico 3D representa cada alternativa como un punto y el ideal como un rombo. Los ejes se orientan para que un valor mayor sea mejor (100 − valor en criterios que se minimizan), se dividen entre 100 y se multiplican por w<sub>j</sub><sup>1/p</sup>. Así, la distancia de orden p entre los puntos coincide con el cálculo. Con p = 2, los segmentos muestran la distancia euclídea en ese espacio; con otros valores de p, usa las etiquetas numéricas. Girar, desplazar o ampliar la vista no cambia los datos ni las distancias. Este laboratorio mide la distancia al ideal positivo; no calcula el índice TOPSIS.</p>
+      </div></details>
+      <div class="panel scenario"><h3>Conserva tu experimento</h3><p class="muted">Exporta el escenario y sus dos estados temporales para recuperarlos después.</p><div class="scenario-actions"><button class="button" id="export">↓ Exportar JSON</button><button class="button subtle" id="import">↑ Importar JSON</button><input type="file" id="import-file" accept="application/json,.json" hidden></div><p class="small muted">El trabajo se guarda también en este navegador cuando su configuración lo permite.</p></div>
+    </section>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <noscript><p class="notice danger">Activa JavaScript en el navegador para utilizar los controles interactivos.</p></noscript>
+  </main>
+  <footer><span>◎ &nbsp; Distancia al ideal</span><span>3 alternativas. 3 criterios. Tus prioridades.</span><span>Autor y última modificación por: Pablo Ib</span></footer>
+</body>
+</html>
