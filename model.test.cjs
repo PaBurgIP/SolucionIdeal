@@ -58,15 +58,26 @@ test('Boundary values and arbitrary allowed percentages obey Euclidean norm boun
   }
 });
 test('State validation rejects malformed values, percentages, directions and names', () => {
-  for(const bad of [{values:[[NaN]]},{weights:[-1,1,1]},{weights:[101,0,0]},{directions:['max','bad','min']},{criteria:['','b','c']},{criteria:['x'.repeat(81),'b','c']}]) assert.throws(()=>M.validate({...M.example(),...bad}));
+  for(const bad of [{values:[[NaN]]},{weights:[-1,1,1]},{weights:[101,0,0]},{directions:['max','bad','min']},{criteria:['','b','c']},{criteria:['x'.repeat(81),'b','c']},{alternatives:['','b','c']},{alternatives:['x'.repeat(81),'b','c']},{alternatives:['a','b']}]) assert.throws(()=>M.validate({...M.example(),...bad}));
   assert.doesNotThrow(()=>M.validate({...M.example(),criteria:['Frío & calor','<Factor>','DiFLUsion']}));
 });
 test('Authorship and names survive exact schema 3 persistence round trip without aliasing', () => {
   const state=M.example();state.criteria[0]='Temperatura máxima';
+  state.alternatives[1]='Opción personalizada';
   const payload=M.exported(state);
   assert.equal(payload.author,'Pablo Ib');assert.equal(payload.lastModifiedBy,'Pablo Ib');
   assert.deepEqual(M.imported(JSON.parse(JSON.stringify(payload))),{state});
   payload.state.values[0][0]=0;assert.equal(state.values[0][0],88);
+  payload.state.alternatives[1]='Otro nombre';assert.equal(state.alternatives[1],'Opción personalizada');
+  assert.equal(M.calculate(state).rows[1].name,'Opción personalizada');
+});
+
+test('Previous schema 3 scenarios retain criteria and acquire editable alternative defaults',()=>{
+  const state=M.example();delete state.alternatives;state.criteria=['Coste','Riesgo','Plazo'];
+  const restored=M.imported({schemaVersion:3,state}).state;
+  assert.deepEqual(restored.criteria,state.criteria);assert.deepEqual(restored.values,state.values);assert.deepEqual(restored.alternatives,M.NAMES);
+  assert.ok(!('alternatives' in state));
+  assert.throws(()=>M.imported({schemaVersion:3,state:{...state,alternatives:null}}));
 });
 test('Legacy browser scenarios migrate percentages, defaults and three alternatives without temporal/metric controls', () => {
   const old={values:[...M.example().values,[1,2,3],[4,5,6]],weights:[20,30,50],directions:['min','max','max'],p:5,idealMode:'fixed'};

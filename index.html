@@ -33,7 +33,7 @@
     <section class="workspace" id="laboratorio" aria-label="Laboratorio interactivo">
       <section class="panel experiment" aria-labelledby="matrix-title">
         <div class="panel-heading"><div><div class="section-label">01 / LAS ALTERNATIVAS</div><h2 id="matrix-title">El experimento está en tus manos</h2></div><button class="button" id="randomize">↝ Otro ejemplo</button></div>
-        <p class="muted panel-intro">Pon nombre a cada factor, escribe su peso en porcentaje y modifica los valores entre 0 y 100.</p>
+        <p class="muted panel-intro">Edita los nombres de los criterios y las alternativas, escribe los pesos en porcentaje y modifica los valores entre 0 y 100.</p>
         <div class="table-scroll"><table class="input-matrix">
           <caption class="sr-only">Matriz editable de tres alternativas y tres factores de riesgo. Los encabezados permiten editar nombres, pesos y sentido.</caption>
           <thead><tr><th scope="col" class="alternative-heading">Alternativa</th><th scope="col" id="factor-0"></th><th scope="col" id="factor-1"></th><th scope="col" id="factor-2"></th></tr></thead>
@@ -48,6 +48,10 @@
         <div class="panel-heading"><div><div class="section-label">02 / EL ESPACIO DE DECISIÓN</div><h2 id="results-title">Ideal, antiideal y alternativas</h2></div></div>
         <div class="chart-area">
           <div class="scene-topline"><span>VISTA INTERACTIVA 3D</span><output id="zoom-readout" aria-label="Ampliación de la vista">Zoom 100 %</output></div>
+          <div class="distance-controls" role="group" aria-label="Mostrar distancias en el gráfico">
+            <label><input id="show-ideal-distances" type="checkbox" aria-controls="scene"><span class="distance-key" aria-hidden="true"></span>Distancias al ideal</label>
+            <label><input id="show-antiideal-distances" type="checkbox" aria-controls="scene"><span class="distance-key antiideal-key" aria-hidden="true"></span>Distancias al antiideal</label>
+          </div>
           <svg id="scene" viewBox="0 0 680 440" role="group" aria-roledescription="gráfico tridimensional interactivo" tabindex="0" aria-labelledby="scene-title" aria-describedby="scene-desc scene-help"><title id="scene-title">Alternativas, solución ideal y antiideal</title><desc id="scene-desc">Cada eje representa un factor normalizado y ponderado. Se muestran los puntos y sus nombres. Arrastra para girar, usa la rueda para ampliar o Mayús y arrastrar para desplazar. Con el gráfico enfocado, usa flechas, más, menos o Inicio.</desc><g id="scene-content"></g></svg>
           <div class="camera-toolbar" role="group" aria-label="Controles de la vista 3D"><button id="camera-left" aria-label="Girar a la izquierda" title="Girar a la izquierda">↶</button><button id="camera-right" aria-label="Girar a la derecha" title="Girar a la derecha">↷</button><span></span><button id="camera-out" aria-label="Alejar" title="Alejar">−</button><button id="camera-in" aria-label="Acercar" title="Acercar">＋</button><button id="camera-reset" class="camera-reset">Centrar vista</button></div>
           <p id="scene-help" class="scene-help">Arrastra para girar · Rueda para zoom · Mayús + arrastrar para desplazar<br>En pantalla táctil: un dedo gira; dos dedos amplían y desplazan.</p>

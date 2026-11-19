@@ -1,0 +1,5 @@
+# Author: Pablo Ib | Last modified by: Pablo Ib
+node_modules/
+.DS_Store
+Thumbs.db
+*.log

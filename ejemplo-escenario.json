@@ -31,9 +31,14 @@
       "max"
     ],
     "criteria": [
-      "Temperaturas",
-      "Humedales",
-      "DiFLUsion"
+      "Criterio 1",
+      "Criterio 2",
+      "Criterio 3"
+    ],
+    "alternatives": [
+      "Alternativa 1",
+      "Alternativa 2",
+      "Alternativa 3"
     ]
   }
 }

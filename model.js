@@ -2,23 +2,24 @@
 (function (root) {
   'use strict';
   const AUTHOR = 'Pablo Ib';
-  const NAMES = ['Alternativa A', 'Alternativa B', 'Alternativa C'];
-  const CRITERIA = ['Temperaturas', 'Humedales', 'DiFLUsion'];
+  const NAMES = ['Alternativa 1', 'Alternativa 2', 'Alternativa 3'];
+  const CRITERIA = ['Criterio 1', 'Criterio 2', 'Criterio 3'];
   const COLORS = ['#3268c4', '#b76c2d', '#8b5bb5'];
   const clone = value => JSON.parse(JSON.stringify(value));
   function example() {
     return {
       values: [[88, 52, 46], [61, 91, 58], [56, 62, 94]],
-      weights: [34, 33, 33], directions: ['max', 'max', 'max'], criteria: CRITERIA.slice()
+      weights: [34, 33, 33], directions: ['max', 'max', 'max'], criteria: CRITERIA.slice(), alternatives: NAMES.slice()
     };
   }
   function validate(state) {
     const triplet = value => Array.isArray(value) && value.length === 3;
     const percentage = x => Number.isFinite(x) && x >= 0 && x <= 100;
+    const names = value => triplet(value) && value.every(x => typeof x === 'string' && x.trim().length > 0 && x.length <= 80);
     if (!state || !triplet(state.values) || !state.values.every(row => triplet(row) && row.every(percentage)) ||
         !triplet(state.weights) || !state.weights.every(percentage) ||
         !triplet(state.directions) || !state.directions.every(x => x === 'max' || x === 'min') ||
-        !triplet(state.criteria) || !state.criteria.every(x => typeof x === 'string' && x.trim().length > 0 && x.length <= 80)) {
+        !names(state.criteria) || !names(state.alternatives)) {
       throw new Error('Se necesitan tres alternativas y tres factores con nombre, valores y porcentajes entre 0 y 100.');
     }
     return state;
@@ -39,7 +40,7 @@
     const weightedAntiIdeal = antiIdeal.map((x, j) => x / 100 * weights[j]);
     const distance = (point, target) => Math.hypot(...point.map((x, j) => x - target[j]));
     const rows = state.values.map((values, i) => ({
-      index: i, name: NAMES[i], color: COLORS[i], values,
+      index: i, name: state.alternatives[i], color: COLORS[i], values,
       normalized: normalized[i], weighted: weighted[i],
       distance: total ? distance(weighted[i], weightedIdeal) : null,
       distanceAntiIdeal: total ? distance(weighted[i], weightedAntiIdeal) : null,
@@ -69,8 +70,9 @@
         if (sum) state.weights = state.weights.map(x => x / sum * 100);
       }
     }
+    if (state && !Object.prototype.hasOwnProperty.call(state, 'alternatives')) state.alternatives = NAMES.slice();
     validate(state);
-    return {state: {values: state.values, weights: state.weights, directions: state.directions, criteria: state.criteria}};
+    return {state: {values: state.values, weights: state.weights, directions: state.directions, criteria: state.criteria, alternatives: state.alternatives}};
   }
   const api = {AUTHOR, NAMES, CRITERIA, COLORS, example, clone, validate, calculate, exported, imported};
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

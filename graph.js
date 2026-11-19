@@ -45,7 +45,9 @@
         if (point && !this.dragged) options.onSelect?.(Number(point.dataset.point));
       });
     }
-    update(state, result, selected = null) { this.state = state; this.result = result; this.selected = selected; this.draw(); }
+    update(state, result, selected = null, distances = {}) {
+      this.state = state; this.result = result; this.selected = selected; this.distances = distances; this.draw();
+    }
     reset() { this.camera = initialCamera(); this.draw(); }
     orbit(yaw, pitch = 0) { this.camera.yaw += yaw; this.camera.pitch = clamp(this.camera.pitch + pitch,-1.35,1.35); this.draw(); }
     zoom(factor) { this.camera.zoom = clamp(this.camera.zoom * factor,.5,2.8); this.draw(); }
@@ -84,7 +86,7 @@
         const u=p(a),v=p(b);
         return `<line x1="${u[0]}" y1="${u[1]}" x2="${v[0]}" y2="${v[1]}" stroke="${color}" stroke-width="${width}" ${dash ? `stroke-dasharray="${dash}"` : ''} vector-effect="non-scaling-stroke"/>`;
       };
-      const origin=[0,0,0]; let out='';
+      const origin=[0,0,0],labels=[]; let out='';
       for(let j=0;j<3;j++) {
         const axes=[0,1,2].filter(k=>k!==j);
         for(let tick=0;tick<=5;tick++) {
@@ -107,15 +109,26 @@
         const anchor=Math.abs(q[0]-340)<35 ? 'middle' : q[0]>340 ? 'start' : 'end';
         const name=this.state.criteria[j];
         const axisName=name.length>23 ? name.slice(0,22)+'…' : name;
+        labels.push({x:q[0],y:q[1]},{x:q[0],y:q[1]+15});
         out+=`<text x="${q[0]}" y="${q[1]}" text-anchor="${anchor}" class="scene-axis" fill="${axisColors[j]}"><title>${escape(name)}</title>${escape(axisName)}<tspan x="${q[0]}" dy="15" class="scene-axis-note">${this.state.directions[j]==='max' ? '↑ más es mejor' : '↓ menos es mejor'}</tspan></text>`;
         const mid=end.map(x=>x*.5), m=p(mid);
         out+=`<text x="${m[0]+5}" y="${m[1]+14}" class="scene-tick">${(extent*.5).toLocaleString('es-ES',{maximumFractionDigits:3})}</text>`;
       });
       const zero=p(origin); out+=`<text x="${zero[0]-12}" y="${zero[1]+15}" class="scene-tick">0</text>`;
+      this.result.rows.forEach((row,i) => {
+        const opacity=this.selected===null || this.selected===row.index ? 1 : .25;
+        for (const [key,target,label,distance,dash] of [
+          ['ideal',ideal,'ideal',row.distance,''],
+          ['antiIdeal',antiIdeal,'antiideal',row.distanceAntiIdeal,'4 3']
+        ]) {
+          if (!this.distances[key]) continue;
+          const value=distance.toLocaleString('es-ES',{minimumFractionDigits:3,maximumFractionDigits:3});
+          out+=`<g class="distance-segment" data-distance="${key}" data-alternative-index="${row.index}" opacity="${opacity}"><title>${escape(row.name)} · Distancia al ${label}: ${value}</title>${line(points[i],target,row.color,1,dash)}</g>`;
+        }
+      });
       const objects=this.result.rows.map((row,i)=>({row,point:points[i],name:row.name,color:row.color}));
       objects.push({point:ideal,name:'Ideal',color:'#203c36',kind:'ideal'}, {point:antiIdeal,name:'Antiideal',color:'#a86945',kind:'antiideal'});
       objects.sort((a,b)=>p(a.point)[2]-p(b.point)[2]);
-      const labels=[];
       objects.forEach(object => {
         const q=p(object.point),row=object.row;
         const opacity=!row || this.selected===null || this.selected===row.index ? 1 : .25;

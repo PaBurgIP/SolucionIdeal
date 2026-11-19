@@ -29,7 +29,7 @@ test('Projection remains finite for collapsed dimensions',()=>{
     [...space.points,space.ideal,space.antiIdeal].forEach(point=>assert.ok(G.project(point,space.extents,G.initialCamera()).every(Number.isFinite)));
   }
 });
-test('Rendered chart includes both references and names, escapes custom labels, and has no distance segments or readouts',()=>{
+test('Rendered chart includes both references and names, escapes custom labels, and hides distance segments by default',()=>{
   const state={...M.example(),criteria:['<script> & frío','Humedales','DiFLUsion']},result=M.calculate(state),content={innerHTML:''};
   const svg={querySelector:()=>content,addEventListener:()=>{}},chart=new G.Chart(svg);
   chart.update(state,result);
@@ -40,5 +40,31 @@ test('Rendered chart includes both references and names, escapes custom labels, 
   assert.ok(!/distancia|stroke-dasharray|· 0[,\.]/i.test(content.innerHTML));
   chart.update({...state,weights:[0,0,0]},M.calculate({...state,weights:[0,0,0]}));
   assert.match(content.innerHTML,/Activa al menos un peso/);
+});
+
+test('Distance segments join each alternative to the correct reference, preserving colors and camera projection',()=>{
+  const content={innerHTML:''},svg={querySelector:()=>content,addEventListener:()=>{}},chart=new G.Chart(svg);
+  const segments=()=>[...content.innerHTML.matchAll(/<g class="distance-segment" data-distance="([^"]+)" data-alternative-index="(\d+)" opacity="([^"]+)"><title>(.*?)<\/title><line ([^>]+)\/><\/g>/g)];
+  for(const weights of [[34,33,33],[100,0,0]]) for(const directions of [['max','max','max'],['min','max','min']]) {
+    const state={...M.example(),weights,directions},result=M.calculate(state),space=G.geometry(state,result);
+    for(const visibility of [{ideal:true},{antiIdeal:true},{ideal:true,antiIdeal:true},{}]) {
+      chart.update(state,result,1,visibility);chart.orbit(.2,.1);chart.zoom(1.05);
+      assert.equal(segments().length,3*Object.keys(visibility).length);
+      for(const [,kind,index,opacity,title,line] of segments()) {
+        assert.equal(visibility[kind],true);
+        const row=result.rows[Number(index)],attrs=Object.fromEntries([...line.matchAll(/([\w-]+)="([^"]+)"/g)].map(m=>[m[1],m[2]]));
+        const from=G.project(space.points[index],space.extents,chart.camera),to=G.project(kind==='ideal'?space.ideal:space.antiIdeal,space.extents,chart.camera);
+        assert.deepEqual([+attrs.x1,+attrs.y1,+attrs.x2,+attrs.y2],[from[0],from[1],to[0],to[1]]);
+        assert.equal(attrs.stroke,row.color);assert.equal(attrs['stroke-width'],'1');
+        assert.equal(attrs['vector-effect'],'non-scaling-stroke');
+        assert.equal(attrs['stroke-dasharray'],kind==='antiIdeal'?'4 3':undefined);
+        assert.equal(+opacity,+index===1?1:.25);
+        assert.ok(title.includes((kind==='ideal'?row.distance:row.distanceAntiIdeal).toLocaleString('es-ES',{minimumFractionDigits:3,maximumFractionDigits:3})));
+      }
+    }
+  }
+  const zero={...M.example(),weights:[0,0,0]};chart.update(zero,M.calculate(zero),null,{ideal:true,antiIdeal:true});assert.equal(segments().length,0);
+  const coincident={...M.example(),values:[[50,50,50],[50,50,50],[50,50,50]]};
+  chart.update(coincident,M.calculate(coincident),null,{ideal:true,antiIdeal:true});assert.equal(segments().length,6);assert.ok(!/NaN|Infinity/.test(content.innerHTML));
 });
 
